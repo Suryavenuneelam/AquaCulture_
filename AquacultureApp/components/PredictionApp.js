@@ -24,13 +24,14 @@ const FloatingLabelInput = ({ label, value, onChangeText }) => {
 
 const PredictionApp = () => {
   const [pH, setPh] = useState('');
-  const [CO3, setCO3] = useState('');
+  const [CO3, setCO3] = useState('10'); // Hardcoded value
   const [salinity, setSalinity] = useState('');
-  const [HCO3, setHCO3] = useState('');
-  const [alkalinity, setAlkalinity] = useState('');
+  const [HCO3, setHCO3] = useState('120'); // Hardcoded value
+  const [alkalinity, setAlkalinity] = useState('120'); // Hardcoded value
   const [hardness, setHardness] = useState('');
-  const [caMgRatio, setCaMgRatio] = useState('');
+  const [caMgRatio, setCaMgRatio] = useState('0.30'); // Hardcoded value
   const [dissolvedOxygen, setDissolvedOxygen] = useState('');
+  const [TDS, setTDS] = useState('');
   const [prediction, setPrediction] = useState(null);
   const [connected, setConnected] = useState(false);
   const [devices, setDevices] = useState([]);
@@ -76,16 +77,13 @@ const PredictionApp = () => {
 
     BluetoothSerial.withDelimiter('\n').then(() => {
       BluetoothSerial.on('read', (data) => {
-        const [receivedTDS, receivedHardness, receivedSalinity, receivedPh] = data.data.split(',');
-        console.log('Received Data:', receivedTDS, receivedHardness, receivedSalinity, receivedPh);
-
-        if (receivedTDS && receivedHardness && receivedSalinity && receivedPh) {
-          setCO3(receivedTDS.trim());
+        const [receivedTDS, receivedHardness, receivedSalinity, receivedOxygen, receivedPh] = data.data.split(',');
+        if (receivedPh && receivedOxygen && receivedTDS && receivedHardness && receivedSalinity) {
+          setPh(receivedPh.trim());
+          setDissolvedOxygen(receivedOxygen.trim());
+          setTDS(receivedTDS.trim());
           setHardness(receivedHardness.trim());
           setSalinity(receivedSalinity.trim());
-          setPh(receivedPh.trim());
-        } else {
-          console.error('Incomplete data received:', data);
         }
       });
     });
@@ -99,7 +97,6 @@ const PredictionApp = () => {
   };
 
   const submitData = async () => {
-    // Ensure all inputs are parsed to numbers
     const payload = {
       pH: parseFloat(pH),
       CO3: parseFloat(CO3),
@@ -111,14 +108,11 @@ const PredictionApp = () => {
       'Dissolved Oxygen': parseFloat(dissolvedOxygen),
     };
 
-    // Log the payload to ensure all data is correctly formatted
-    console.log('Payload to API:', payload);
-
     try {
-      const response = await axios.post('https://tricky-pants-melt.loca.lt/predict', payload);
+      const response = await axios.post('https://chubby-clocks-own.loca.lt/predict', payload);
       setPrediction(String(response.data.prediction));
     } catch (error) {
-      Alert.alert('Prediction Error', error.message);
+      Alert.alert('Prediction Error', 'Failed to get prediction from server.');
     }
   };
 
@@ -142,8 +136,8 @@ const PredictionApp = () => {
         </>
       ) : (
         <>
-          <Button title={`Disconnect ${selectedDevice.name}`} color="#d32f2f" onPress={disconnectFromDevice} />
-          <Text style={styles.connectedText}>Connected to: {selectedDevice.name}</Text>
+        <Button title={`Disconnect ${selectedDevice.name}`} color="#d32f2f" onPress={disconnectFromDevice} />
+        <Text style={styles.connectedText}>Connected to: {selectedDevice.name}</Text>
         </>
       )}
 
@@ -175,6 +169,7 @@ const PredictionApp = () => {
       <FloatingLabelInput label="Hardness" value={hardness} onChangeText={setHardness} />
       <FloatingLabelInput label="Ca:Mg Ratio" value={caMgRatio} onChangeText={setCaMgRatio} />
       <FloatingLabelInput label="Dissolved Oxygen" value={dissolvedOxygen} onChangeText={setDissolvedOxygen} />
+      <FloatingLabelInput label="TDS" value={TDS} onChangeText={setTDS} />
       
       <Button title="Submit Data" color="#00796b" onPress={submitData} />
       {renderPredictionMessage()}
@@ -210,44 +205,37 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
+    margin: 20,
     padding: 20,
     borderRadius: 10,
-    margin: 20,
   },
   modalHeaderText: {
-    fontSize: 18,
+    color: 'black',
+    textAlign: 'center',
     fontWeight: 'bold',
-    marginBottom: 10,
   },
   deviceItem: {
     padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    backgroundColor: '#ddd',
+    marginVertical: 5,
+    borderRadius: 5,
   },
   deviceText: {
-    fontSize: 16,
-  },
-  predictionTextSuccess: {
     textAlign: 'center',
-    fontSize: 16,
-    color: '#4caf50',
-    fontWeight: 'bold',
-  },
-  predictionTextError: {
-    textAlign: 'center',
-    fontSize: 16,
-    color: '#f44336',
-    fontWeight: 'bold',
+    color: '#333',
   },
   inputContainer: {
-    marginVertical: 10,
+    marginBottom: 20,
   },
   input: {
     borderBottomWidth: 1,
-    borderBottomColor: '#aaa',
+    borderBottomColor: '#ccc',
     paddingVertical: 5,
     fontSize: 16,
+  },
+  filled: {
+    color: '#00796b',
   },
   focused: {
     borderBottomColor: '#00796b',
@@ -255,18 +243,26 @@ const styles = StyleSheet.create({
   label: {
     position: 'absolute',
     left: 0,
-    top: 10,
+    top: 5,
     fontSize: 16,
     color: '#aaa',
-    transition: '0.2s',
   },
   labelFocused: {
-    top: -10,
+    top: -20,
     fontSize: 12,
     color: '#00796b',
   },
-  filled: {
-    borderBottomColor: '#00796b',
+  predictionTextSuccess: {
+    textAlign: 'center',
+    color: '#388e3c',
+    fontWeight: 'bold',
+    marginTop: 20,
+  },
+  predictionTextError: {
+    textAlign: 'center',
+    color: '#d32f2f',
+    fontWeight: 'bold',
+    marginTop: 20,
   },
 });
 

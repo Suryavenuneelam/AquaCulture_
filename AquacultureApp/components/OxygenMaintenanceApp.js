@@ -81,7 +81,7 @@ const OxygenMaintenanceApp = () => {
 
     BluetoothSerial.withDelimiter('\n').then(() => {
       BluetoothSerial.on('read', (data) => {
-        const [receivedPh, receivedOxygen] = data.data.split(',');
+        const [receivedTDS, receivedHardness, receivedSalinity, receivedOxygen, receivedPh] = data.data.split(',');
         if (receivedOxygen) {
           setCurrentOxygenLevel(receivedOxygen.trim());
         }
